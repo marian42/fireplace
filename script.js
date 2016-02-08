@@ -22,6 +22,17 @@ palette = [
 	{pos: 1.0, color: [255, 255, 255]}
 ]
 
+gradient_size = 100;
+var gradient = [];
+
+function setupGradient() {
+	for (var i = 0; i <= gradient_size; i++) {
+		gradient.push(getColor(i / gradient_size));
+	}
+}
+
+setupGradient();
+
 function simplex(x, y, octaves, lowercap, uppercap) {
 	if (!octaves) octaves = 6;
 	if (!lowercap) lowercap = 0;
@@ -40,10 +51,7 @@ function simplex(x, y, octaves, lowercap, uppercap) {
 	return (v - lowercap) / (uppercap - lowercap);
 }
 
-function getFireValue(x, y) {
-	var now = new Date();
-	var t = now.getTime() / 1000.0;
-
+function getFireValue(x, y, t) {
 	x += 0.12 * simplex(x * 2, y * 2 + t * 0.02, 2, 0.135, 0.78) * (1.0 - y);
 
 	var stretch = 2;
@@ -57,16 +65,16 @@ function getFireValue(x, y) {
 	return value;
 }
 
-function setPixelRGB(x, y, r, g, b) {
+function setPixelRGB(x, y, color) {
 	if (x >= width || y >= height || x < 0 || y < 0)
 		return;
 
-	buffer[(y * width + x) * 4 + 0] = r;
-	buffer[(y * width + x) * 4 + 1] = g;
-	buffer[(y * width + x) * 4 + 2] = b;
+	buffer[(y * width + x) * 4 + 0] = color.r;
+	buffer[(y * width + x) * 4 + 1] = color.g;
+	buffer[(y * width + x) * 4 + 2] = color.b;
 }
 
-function setPixel(x, y, value) {
+function getColor(value) {
 	var stop1 = 0;
 
 	while (palette[stop1 + 1].pos < value) stop1++;
@@ -77,7 +85,11 @@ function setPixel(x, y, value) {
 	var g = blend * palette[stop1].color[1] + (1.0 - blend) * palette[stop1 + 1].color[1];
 	var b = blend * palette[stop1].color[2] + (1.0 - blend) * palette[stop1 + 1].color[2];
 
-	setPixelRGB(x, y, r, g, b);
+	return {r: r, g: g, b: b};
+}
+
+function getColorQuick(value) {
+	return gradient[Math.round(value * gradient_size)];
 }
 
 function drawFrame() {
@@ -88,12 +100,15 @@ function drawFrame() {
 
 	var imageData = ctx.getImageData(0, 0, width, height);
 	buffer = imageData.data
+
+	var now = new Date();
+	var t = now.getTime() / 1000.0;
 	
 	for (var x = 0; x < width; x++) {
 		for (var y = 0; y < height; y++) {
-			value = getFireValue(x / width, 1.0 - y / height);
+			value = getFireValue(x / width, 1.0 - y / height, t);
 
-			setPixel(x, y, value);
+			setPixelRGB(x, y, getColorQuick(value));
 		}
 	}
 
